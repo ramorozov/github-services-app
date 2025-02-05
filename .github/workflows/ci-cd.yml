@@ -1,0 +1,46 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозитория
+        uses: actions/checkout@v3
+
+      - name: Установка Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Установка зависимостей
+        run: pip install -r requirements.txt
+
+      - name: Запуск тестов
+        run: |
+          pytest || exit 1
+
+  docker-build-and-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозитория
+        uses: actions/checkout@v3
+
+      - name: Вход в Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Сборка Docker-образа
+        run: docker build -t username/python-docker-app:latest .
+
+      - name: Публикация образа в Docker Hub
+        run: docker push username/python-docker-app:latest
